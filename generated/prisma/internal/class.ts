@@ -17,8 +17,8 @@ import type * as Prisma from "./prismaNamespace"
 
 const config: runtime.GetPrismaClientConfig = {
   "previewFeatures": [],
-  "clientVersion": "7.1.0",
-  "engineVersion": "ab635e6b9d606fa5c8fb8b1a7f909c3c3c1c98ba",
+  "clientVersion": "7.3.0",
+  "engineVersion": "9d6ad21cbbceab97458517b147a6a09ff43aa735",
   "activeProvider": "postgresql",
   "inlineSchema": "// prisma/schema.prisma\n// Define your database models\n\ngenerator client {\n  provider = \"prisma-client\"\n  output   = \"../generated/prisma\"\n}\n\ndatasource db {\n  provider = \"postgresql\"\n}\n\n/**\n * 単語\n */\nmodel Word {\n  id                    Int      @id @default(autoincrement())\n  headword              String // 見出し語\n  pronunciation         String? // 発音記号\n  pos                   String // 品詞\n  definition            String // 定義\n  past                  String? // 過去形\n  past_participle       String? // 過去分詞\n  present_participle    String? // 現在分詞\n  third_person_singular String? // 三人称単数形\n  created_at            DateTime @default(now())\n  updated_at            DateTime @updatedAt\n\n  examples Example[]\n\n  @@unique([headword, pos])\n  @@index([headword])\n  @@index([pos])\n}\n\nmodel Example {\n  id          Int      @id @default(autoincrement())\n  word        Word     @relation(fields: [word_id], references: [id])\n  word_id     Int // 単語キー\n  slot        Int // スロット番号（1: 基本, 2: ゲーム, 3: プログラミング）\n  sentence_en String // 例文\n  sentence_ja String // 例文（日本語訳）\n  created_at  DateTime @default(now())\n  updated_at  DateTime @updatedAt\n\n  @@index([word_id])\n  @@index([slot])\n}\n\n/**\n * 類義語\n */\nmodel SynonymGroup {\n  id          Int                 @id @default(autoincrement())\n  title       String // グループ名\n  description String? // 説明\n  entries     SynonymGroupEntry[]\n\n  @@index([title])\n}\n\nmodel SynonymGroupEntry {\n  id          Int          @id @default(autoincrement())\n  group       SynonymGroup @relation(fields: [group_id], references: [id])\n  group_id    Int // グループキー\n  word        String // 単語\n  pos         String // 品詞\n  description String // 説明\n  sentence_en String // 例文\n  sentence_ja String // 例文（日本語訳）\n  order       Int          @default(0)\n\n  @@unique([group_id, word, pos])\n  @@index([group_id])\n  @@index([word])\n  @@index([pos])\n}\n\n/**\n * 対義語\n */\nmodel AntonymGroup {\n  id          Int                 @id @default(autoincrement())\n  title       String // グループ名\n  description String? // 説明\n  entries     AntonymGroupEntry[]\n\n  @@index([title])\n}\n\nmodel AntonymGroupEntry {\n  id          Int          @id @default(autoincrement())\n  group       AntonymGroup @relation(fields: [group_id], references: [id])\n  group_id    Int // グループキー\n  word        String // 単語\n  pos         String // 品詞\n  description String // 説明\n  sentence_en String // 例文\n  sentence_ja String // 例文（日本語訳）\n  order       Int          @default(0)\n\n  @@unique([group_id, word, pos])\n  @@index([group_id])\n  @@index([word])\n  @@index([pos])\n}\n",
   "runtimeDataModel": {
@@ -37,12 +37,14 @@ async function decodeBase64AsWasm(wasmBase64: string): Promise<WebAssembly.Modul
 }
 
 config.compilerWasm = {
-  getRuntime: async () => await import("@prisma/client/runtime/query_compiler_bg.postgresql.mjs"),
+  getRuntime: async () => await import("@prisma/client/runtime/query_compiler_fast_bg.postgresql.mjs"),
 
   getQueryCompilerWasmModule: async () => {
-    const { wasm } = await import("@prisma/client/runtime/query_compiler_bg.postgresql.wasm-base64.mjs")
+    const { wasm } = await import("@prisma/client/runtime/query_compiler_fast_bg.postgresql.wasm-base64.mjs")
     return await decodeBase64AsWasm(wasm)
-  }
+  },
+
+  importName: "./query_compiler_fast_bg.js"
 }
 
 
